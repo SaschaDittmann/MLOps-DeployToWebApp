@@ -150,6 +150,8 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: Create App Service Plan
-      run: |
-        az appservice plan create -n "$AZURE_WEBAPP_SERVICEPLAN_NAME" -g "RESOURCE_GROUP" -l "$REGION" \ 
-          --sku "$AZURE_WEBAPP_SERVICEPLAN_SKU" --is-linux
+      uses: azure/CLI@v1
+      with:
+        inlineScript:
+          az appservice plan create -n "$AZURE_WEBAPP_SERVICEPLAN_NAME" -g "RESOURCE_GROUP" -l "$REGION" \ 
+            --sku "$AZURE_WEBAPP_SERVICEPLAN_SKU" --is-linux
