@@ -18,6 +18,8 @@ env:
   AZUREML_COMPUTE_IDLE_SECONDS_BEFORE_SCALEDOWN: 300
   AZUREML_EXPERIMENT_NAME: diabetes_sklearn
   AZUREML_MODEL_NAME: diabetes_model
+  AZURE_WEBAPP_SERVICEPLAN_NAME: mlops-svcplan
+  AZURE_WEBAPP_SERVICEPLAN_SKU: F1
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
 jobs:
@@ -139,3 +141,15 @@ jobs:
       with:
         name: environment
         path: ./metadata/diabetes-environment.json
+  appserviceplan:
+    runs-on: ubuntu-18.04
+    name: Setup App Service Plan
+    steps:
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Create App Service Plan
+      run: |
+        az appservice plan create -n "$AZURE_WEBAPP_SERVICEPLAN_NAME" -g "RESOURCE_GROUP" -l "$REGION" \ 
+          --sku "$AZURE_WEBAPP_SERVICEPLAN_SKU" --is-linux
