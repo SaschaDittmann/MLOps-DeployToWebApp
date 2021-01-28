@@ -21,6 +21,7 @@ env:
   AZUREML_IMAGE_NAME: diabetesimage
   AZURE_WEBAPP_SERVICEPLAN_NAME: mlops-svcplan
   AZURE_WEBAPP_SERVICEPLAN_SKU: F1
+  AZURE_WEBAPP_NAME: diabetes-webapp
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
 jobs:
@@ -187,7 +188,7 @@ jobs:
     - name: Package Model Deployment (Build Docker Image)
       run: |
         echo "Using the following parameters:"
-        echo "service name: $AZUREML_SERVICE_NAME_STAGING"
+        echo "image name: $AZUREML_IMAGE_NAME"
         echo "environment name: $(jq -r '.name' ../metadata/diabetes-environment.json)"
         echo "environment verison: $(jq -r '.version' ../metadata/diabetes-environment.json)"
         az ml model package -g "$RESOURCE_GROUP" -w "$AZUREML_WORKSPACE_NAME" \
@@ -201,3 +202,27 @@ jobs:
       with:
         name: package
         path: ./metadata/package.json
+  deploytowebapp:
+    runs-on: ubuntu-18.04
+    name: Deploy to Web App
+    needs: [appserviceplan, packagedeployment]
+    steps:
+    - name: Download Package Results
+      uses: actions/download-artifact@v2
+      with:
+        name: package
+        path: ./metadata/
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Create Web App
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          export CONTAINER_IMAGE_NAME="$(jq -r '.location' ./metadata/package.json)"
+          echo "Using the following parameters:"
+          echo "app name: $AZURE_WEBAPP_NAME"
+          echo "app service plan: $AZURE_WEBAPP_SERVICEPLAN_NAME"
+          echo "container image name: $CONTAINER_IMAGE_NAME"
+          az webapp create -g "$RESOURCE_GROUP" -n "$AZURE_WEBAPP_NAME" --plan "$AZURE_WEBAPP_SERVICEPLAN_NAME" --deployment-container-image-name "$CONTAINER_IMAGE_NAME"
